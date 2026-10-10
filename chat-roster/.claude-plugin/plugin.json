@@ -1,0 +1,1 @@
+{ "name": "chat-roster", "version": "0.1.0", "description": "A pane listing your other recently active Claude chats and what each was last asked", "types": "./types/index.d.ts" }

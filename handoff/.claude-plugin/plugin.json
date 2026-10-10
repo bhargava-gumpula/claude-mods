@@ -1,0 +1,1 @@
+{ "name": "handoff", "version": "0.1.0", "description": "/handoff writes the phase handoff: checks, dev log entry, HANDOFF.md update and a summary" }
