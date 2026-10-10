@@ -1,12 +1,33 @@
 {
   "name": "my-mods",
-  "owner": { "name": "Bhargava G" },
-  "description": "Claude Code mods: usage band, chat roster, /cube, /handoff, prompt cleanup",
+  "owner": {
+    "name": "Bhargava G"
+  },
+  "description": "Claude Code mods: usage band, chat roster, /cube, /handoff, prompt cleanup, streak",
   "plugins": [
-    { "name": "usage-band", "source": "./usage-band" },
-    { "name": "chat-roster", "source": "./chat-roster" },
-    { "name": "cube", "source": "./cube" },
-    { "name": "handoff", "source": "./handoff" },
-    { "name": "prompt-cleanup", "source": "./prompt-cleanup" }
+    {
+      "name": "usage-band",
+      "source": "./usage-band"
+    },
+    {
+      "name": "chat-roster",
+      "source": "./chat-roster"
+    },
+    {
+      "name": "cube",
+      "source": "./cube"
+    },
+    {
+      "name": "handoff",
+      "source": "./handoff"
+    },
+    {
+      "name": "prompt-cleanup",
+      "source": "./prompt-cleanup"
+    },
+    {
+      "name": "streak",
+      "source": "./streak"
+    }
   ]
 }
