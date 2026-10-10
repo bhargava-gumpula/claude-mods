@@ -342,8 +342,18 @@ final class App: NSObject, NSApplicationDelegate {
     }
   }
 
+  // Keep the window on a screen: after a display change (a different monitor or resolution)
+  // a remembered spot can be off every screen, so it moves back to the main screen's corner.
+  func keepOnScreen() {
+    let f = panel.frame
+    if NSScreen.screens.contains(where: { $0.visibleFrame.contains(f) }) { return }
+    guard let screen = NSScreen.main?.visibleFrame else { return }
+    panel.setFrameOrigin(NSPoint(x: screen.maxX - f.width - 16, y: screen.maxY - f.height - 16))
+  }
+
   // Shown only while the Claude app is the frontmost app.
   func updateVisibility() {
+    keepOnScreen()
     let isClaude = NSWorkspace.shared.frontmostApplication?.bundleIdentifier == "com.anthropic.claudefordesktop"
     if isClaude, !panel.isVisible { panel.orderFrontRegardless() }
     if !isClaude, panel.isVisible { panel.orderOut(nil); HoverLabel.shared.hide() }
@@ -366,6 +376,7 @@ final class App: NSObject, NSApplicationDelegate {
         // Grow and shrink around the top edge's center so the chart stays where it was.
         let old = self.panel.frame
         self.panel.setFrame(NSRect(x: old.midX - s.width / 2, y: old.maxY - s.height, width: s.width, height: s.height), display: true)
+        self.keepOnScreen()
         self.chart.frame = NSRect(origin: .zero, size: s)
         self.chart.rebuild()
         // Messages that arrived in the same second flash one after another, a third of a second apart.
