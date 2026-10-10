@@ -39,13 +39,14 @@ export const register: Register = on => {
     const ran = await next(e)
     await $.command.register({ name: 'streak', description: 'Show your Claude Code day streak' })
     const s = await load($).catch(() => undefined)
-    if (s) $.ui.status(`🔥 ${s.current}-day streak`)
+    // The app labels a mod's status with its name ("streak"), so the text leaves the word out.
+    if (s) $.ui.status(`🔥 ${s.current} days`)
     return ran
   })
 
   on('command.run', { command: 'streak' }, async $ => {
     const s = await load($)
-    $.ui.status(`🔥 ${s.current}-day streak`)
+    $.ui.status(`🔥 ${s.current} days`)
     return { text: `🔥 ${s.current}-day streak · longest ${s.longest} days · ${s.total} days with Claude in all` }
   })
 }

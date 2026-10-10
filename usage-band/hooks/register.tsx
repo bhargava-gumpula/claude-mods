@@ -109,25 +109,30 @@ export const register: Register = on => {
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
+    // Other mods (the chat org chart) draw in this band too: keep theirs to the right of ours.
+    const below = await next(e)
     const u = await read($, usage)
-    if (u === null || e.props.hasSurvey) return next(e)
+    if (u === null || e.props.hasSurvey) return below
 
     const { Box, Text } = $.ui.resolve(e)
     const now = await $.clock.now()
     return (
-      <Box flexDirection="row" columnGap={5} paddingX={1}>
-        {items(u, now, await read($, tokens)).map(i => (
-          <Box key={i.key} flexDirection="row" columnGap={1}>
-            {'label' in i ? <Text dimColor>{i.label}</Text> : null}
-            {i.bar ? (
-              <Text>
-                <Text color={i.color}>{i.bar.filled}</Text>
-                <Text dimColor>{i.bar.empty}</Text>
-              </Text>
-            ) : null}
-            <Text dimColor>{i.text}</Text>
-          </Box>
-        ))}
+      <Box flexDirection="row" alignItems="center">
+        <Box flexDirection="row" columnGap={5} paddingX={1}>
+          {items(u, now, await read($, tokens)).map(i => (
+            <Box key={i.key} flexDirection="row" columnGap={1}>
+              {'label' in i ? <Text dimColor>{i.label}</Text> : null}
+              {i.bar ? (
+                <Text>
+                  <Text color={i.color}>{i.bar.filled}</Text>
+                  <Text dimColor>{i.bar.empty}</Text>
+                </Text>
+              ) : null}
+              <Text dimColor>{i.text}</Text>
+            </Box>
+          ))}
+        </Box>
+        {below}
       </Box>
     )
   })

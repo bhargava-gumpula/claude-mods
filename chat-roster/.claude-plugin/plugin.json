@@ -1,1 +1,1 @@
-{ "name": "chat-roster", "version": "0.1.0", "description": "A pane listing your other recently active Claude chats and what each was last asked", "types": "./types/index.d.ts" }
+{ "name": "chat-roster", "version": "0.2.0", "description": "A floating Mac window with your Claude chats as an org chart of dots (filled = working, hover for the title)" }
