@@ -74,10 +74,19 @@ def running_agents(path):
         out.append({'key': 'agent:' + agent_id, 'title': desc or 'Subagent', 'working': True})
     return out
 
-SEND_AGENT = re.compile(r'"name":"SendMessage","input":\{"to":"([0-9a-f]{12,})"')
+SEND = re.compile(r'"name":"SendMessage","input":\{"to":"([^"]+)"')
 SEND_CHAT = re.compile(r'"name":"mcp__ccd_session_mgmt__send_message","input":\{"session_id":"(local_[0-9a-f-]+)"')
 FROM_AGENT = re.compile(r'"origin":\{"kind":"peer","from":"([0-9a-f]{12,})"')
 SPAWN = re.compile(r'"name":"(?:Agent|Task)","input":\{')
+
+def recipient(to):
+    """The node a SendMessage `to` names: a subagent id, a chat's session id, or a chat's
+    name as ListAgents lists it (its title)."""
+    if re.fullmatch(r'[0-9a-f]{12,}', to):
+        return 'agent:' + to
+    if to.startswith('local_'):
+        return 'chat:' + to
+    return titles.get(to.strip().lower())
 
 def new_events(path, key):
     """Messages written to this chat's transcript since the last run, as (from, to) keys:
@@ -91,7 +100,7 @@ def new_events(path, key):
     with open(path, 'rb') as f:
         f.seek(seen)
         text = f.read().decode('utf-8', 'replace')
-    events = [(key, 'agent:' + a) for a in SEND_AGENT.findall(text)]
+    events = [(key, k) for k in map(recipient, SEND.findall(text)) if k and k != key]
     events += [(key, 'chat:' + c) for c in SEND_CHAT.findall(text)]
     events += [(key, 'spawn') for _ in SPAWN.findall(text)]
     events += [('agent:' + a, key) for a in FROM_AGENT.findall(text)]
@@ -138,6 +147,7 @@ members = [s for s in sessions if group and assignments.get('code:' + s['session
 members.sort(key=lambda s: s.get('createdAt') or 0)
 
 events = []
+titles = {(s.get('title') or '').strip().lower(): 'chat:' + s['sessionId'] for s in members}
 
 def node(s):
     path = transcript(s.get('cliSessionId'))
