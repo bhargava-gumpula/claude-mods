@@ -1,5 +1,5 @@
 import { expect, test } from 'claude-code/testing'
-import { bar, compact, items, mood, pace, slim } from './register'
+import { REFRESH_MS, bar, compact, items, mood, pace, slim } from './register'
 
 test('bar fills with usage', () => {
   expect(bar(0)).toEqual({ filled: '', empty: '░░░░░░░' })
@@ -40,4 +40,8 @@ test('a week-long window counts down in days and hours', () => {
   const now = Date.parse('2026-10-10T10:00:00Z')
   const u = slim({ rateLimits: [{ kind: 'seven_day', percentUsed: 23, resetsAt: '2026-10-13T15:00:00Z' }] })
   expect(items(u, now)[0]?.text).toBe('23% (3d 5h)')
+})
+
+test('the band refreshes every 3 seconds', () => {
+  expect(REFRESH_MS).toBe(3000)
 })

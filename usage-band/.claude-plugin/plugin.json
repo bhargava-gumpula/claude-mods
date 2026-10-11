@@ -1,1 +1,1 @@
-{ "name": "usage-band", "version": "0.1.0", "description": "Always shows context, rate-limit and cost usage above the prompt", "types": "./types/index.d.ts" }
+{ "name": "usage-band", "version": "0.1.1", "description": "Always shows context, rate-limit and cost usage above the prompt", "types": "./types/index.d.ts" }

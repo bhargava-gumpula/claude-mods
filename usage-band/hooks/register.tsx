@@ -7,6 +7,11 @@ const usage = atom({ plugin: 'usage-band', key: 'usage' } as const, null)
 
 const tokens = atom({ plugin: 'usage-band', key: 'tokens' } as const, 0)
 
+// Bumped every refresh so the countdowns redraw even when nothing else moved.
+const tick = atom({ plugin: 'usage-band', key: 'tick' } as const, 0)
+
+export const REFRESH_MS = 3000
+
 const LABELS: Record<string, string> = { five_hour: '5h', seven_day: '7d', spend_limit: 'spend' }
 
 export const slim = (u: Pick<SessionUsage, 'rateLimits' | 'cost'>): Usage => ({
@@ -79,26 +84,36 @@ export const items = (u: Usage, now: number, spent = 0) => [
 ]
 
 // Sums the whole session's transcripts, earlier turns and subagents included.
+// ponytail: rescans the transcripts each time (~1-2 s on a huge session); skips a
+// refresh while one is still running rather than piling up.
+let counting = false
 const recount = async ($: EngineInterface) => {
-  const ran = await $.process.run(['python3', '-I', `${$.plugin.root}/hooks/tokens.py`, await $.session.id()])
-  const n = Number(ran.stdout.trim())
-  if (ran.exitCode === 0 && Number.isFinite(n)) await update($, tokens, () => n)
+  if (counting) return
+  counting = true
+  try {
+    const ran = await $.process.run(['python3', '-I', `${$.plugin.root}/hooks/tokens.py`, await $.session.id()])
+    const n = Number(ran.stdout.trim())
+    if (ran.exitCode === 0 && Number.isFinite(n)) await update($, tokens, () => n)
+  } finally {
+    counting = false
+  }
+}
+
+export const refresh = async ($: EngineInterface) => {
+  const next = slim(await $.session.usage())
+  const prev = await read($, usage)
+  if (JSON.stringify(prev) !== JSON.stringify(next)) await update($, usage, () => next)
+  await update($, tick, n => n + 1)
+  await recount($)
 }
 
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     const ran = await next(e)
-    const u = await $.session.usage()
-    await update($, usage, () => slim(u))
-    // Cost moves with every API response mid-turn; poll it so the emoji flips at each milestone.
-    let lastUsd = u.cost?.usd
-    $.clock.every(3000, async () => {
-      const now = await $.session.usage()
-      if (now.cost?.usd === lastUsd) return
-      lastUsd = now.cost?.usd
-      await update($, usage, () => slim(now))
-    })
-    await recount($)
+    await refresh($)
+    // Limits, cost, tokens and the time-to-reset all move between events: redraw on a timer.
+    // A failed refresh is swallowed so one bad read never ends the interval.
+    $.clock.every(REFRESH_MS, () => refresh($).catch(() => undefined))
     return ran
   })
 
@@ -115,6 +130,7 @@ export const register: Register = on => {
     if (u === null || e.props.hasSurvey) return below
 
     const { Box, Text } = $.ui.resolve(e)
+    await read($, tick)
     const now = await $.clock.now()
     return (
       <Box flexDirection="row" alignItems="center">

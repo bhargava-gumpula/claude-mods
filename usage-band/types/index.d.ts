@@ -5,6 +5,6 @@ export type Usage = {
 
 declare module 'claude-code' {
   interface PluginState {
-    'usage-band': { usage: Usage | null; tokens: number }
+    'usage-band': { usage: Usage | null; tokens: number; tick: number }
   }
 }
