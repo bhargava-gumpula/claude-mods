@@ -10,7 +10,7 @@ const tokens = atom({ plugin: 'usage-band', key: 'tokens' } as const, 0)
 // Bumped every refresh so the countdowns redraw even when nothing else moved.
 const tick = atom({ plugin: 'usage-band', key: 'tick' } as const, 0)
 
-export const REFRESH_MS = 3000
+export const REFRESH_MS = 60_000
 
 const LABELS: Record<string, string> = { five_hour: '5h', seven_day: '7d', spend_limit: 'spend' }
 
@@ -111,7 +111,7 @@ export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     const ran = await next(e)
     await refresh($)
-    // Limits, cost, tokens and the time-to-reset all move between events: redraw on a timer.
+    // Limits, cost, tokens and the time-to-reset all move between events: redraw once a minute.
     // A failed refresh is swallowed so one bad read never ends the interval.
     $.clock.every(REFRESH_MS, () => refresh($).catch(() => undefined))
     return ran

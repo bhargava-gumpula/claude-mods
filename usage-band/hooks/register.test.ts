@@ -42,6 +42,6 @@ test('a week-long window counts down in days and hours', () => {
   expect(items(u, now)[0]?.text).toBe('23% (3d 5h)')
 })
 
-test('the band refreshes every 3 seconds', () => {
-  expect(REFRESH_MS).toBe(3000)
+test('the band refreshes every minute', () => {
+  expect(REFRESH_MS).toBe(60_000)
 })
