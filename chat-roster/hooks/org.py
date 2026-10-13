@@ -54,6 +54,25 @@ def finished_ids(path):
     done_cache[path] = entry
     return set(entry['ids'])
 
+CLOUD = re.compile(r'claude\.ai/code/(session_[A-Za-z0-9]+)')
+CLOUD_TTL = 2 * 86400  # ponytail: no status feed for cloud sessions; show each for 2 days after first seen
+
+def cloud_sessions(path):
+    """Cloud sessions (claude.ai/code) this chat launched or linked, read incrementally like
+    finished_ids. Returns {session id: first-seen time}."""
+    entry = cloud_cache.get(path, {'offset': 0, 'ids': {}})
+    size = os.path.getsize(path)
+    if size < entry['offset']:
+        entry = {'offset': 0, 'ids': {}}
+    if size > entry['offset']:
+        with open(path, 'rb') as f:
+            f.seek(max(0, entry['offset'] - 64))
+            for sid in CLOUD.findall(f.read().decode('utf-8', 'replace')):
+                entry['ids'].setdefault(sid, now)
+        entry['offset'] = size
+    cloud_cache[path] = entry
+    return {s: t for s, t in entry['ids'].items() if now - t <= CLOUD_TTL}
+
 def running_agents(path):
     """Subagents still working: no completion notice in the parent, and their own transcript
     shows an unfinished turn."""
@@ -116,6 +135,7 @@ try:
 except (OSError, ValueError):
     stored_text, stored = '', {}
 cache, done_cache, event_offsets = stored.get('sessions', {}), stored.get('done', {}), stored.get('events', {})
+cloud_cache = stored.get('cloud', {})
 fresh, sessions = {}, []
 for f in glob.glob(os.path.join(APP, 'claude-code-sessions', '*', '*', 'local_*.json')):
     mtime = os.path.getmtime(f)
@@ -160,6 +180,14 @@ def node(s):
 top_s = next((s for s in members if TOP.search(s.get('title') or '')), None)
 top = node(top_s) if top_s else {'key': 'group', 'title': names.get(group, 'Chats'), 'working': False, 'agents': [], 'current': False}
 chats = [node(s) for s in members if s is not top_s]
+# Cloud sessions launched from a chat in the group join it (they have no local file or sidebar row).
+clouds = {}
+for s in members:
+    path = transcript(s.get('cliSessionId'))
+    if path:
+        clouds.update(cloud_sessions(path))
+chats += [{'key': 'cloud:' + sid, 'title': 'Cloud session ' + sid[-6:], 'working': False, 'agents': [], 'current': False}
+          for sid, _ in sorted(clouds.items(), key=lambda kv: kv[1])]
 # Demo: `touch $TMPDIR/claude-orgchart-demo` plays one round of messages, the orchestrator
 # to every chat and every chat back.
 DEMO = os.path.join(os.environ.get('TMPDIR', '/tmp'), 'claude-orgchart-demo')
@@ -167,7 +195,7 @@ if os.path.exists(DEMO):
     os.remove(DEMO)
     events += [(top['key'], c['key']) for c in chats] + [(c['key'], top['key']) for c in chats]
 # Compared as text: the caches above were updated in place, so `stored` changed with them.
-new = json.dumps({'sessions': fresh, 'done': done_cache, 'events': event_offsets})
+new = json.dumps({'sessions': fresh, 'done': done_cache, 'events': event_offsets, 'cloud': cloud_cache})
 if new != stored_text:
     tmp = CACHE + '.tmp'
     open(tmp, 'w').write(new)
