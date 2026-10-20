@@ -1,13 +1,14 @@
 {
   "name": "elevenlabs-call",
-  "version": "0.1.0",
-  "description": "A Call button above the prompt that starts a live ElevenLabs voice call with Claude Code",
+  "version": "0.2.0",
+  "description": "A Call button that puts this chat on a live ElevenLabs voice call: what you say is typed here and the replies are spoken",
   "userConfig": {
     "agentId": {
       "type": "string",
       "title": "ElevenLabs agent ID",
-      "description": "The agent to call, e.g. agent_0123… (ElevenLabs → Agents → your agent)",
+      "description": "The agent to call, e.g. agent_0123\u2026 (ElevenLabs \u2192 Agents \u2192 your agent)",
       "default": ""
     }
-  }
+  },
+  "types": "./types/index.d.ts"
 }
