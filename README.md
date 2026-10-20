@@ -9,7 +9,7 @@ Mods for Claude Code (terminal and the desktop Code tab).
 | **cube** | `/cube`, `/cube 2`, `/cube 4`: random-state scrambles (the WCA method, via cubing.js) |
 | **handoff** | `/handoff [focus]`: runs the project's checks, writes the dev log entry and HANDOFF.md update, commits (never pushes), and summarizes |
 | **streak** | Your streak of days in a row using Claude Code in the status line (`streak 🔥 3 days`); `/streak` adds your longest streak and total days |
-| **elevenlabs-call** | 📞 Call Claude Code above the prompt: opens a brand-new chat that goes on a live ElevenLabs voice call through your mic and speakers (no browser), with an animated orb, filed under the **Voice calls** sidebar group. What you say is typed into the chat and its replies are spoken. Needs the [claude-voice](~/Projects/claude-voice) bridge. `/call` in a chat puts that chat on the call or hangs up |
+| **elevenlabs-call** | 📞 Call Claude Code above the prompt puts the chat you are in on a live ElevenLabs voice call through your mic and speakers (no browser), with an animated orb. What you say is typed into the chat; the agent handles small talk and reads back a short summary of each reply. Hang up from the band or say bye. Needs the [claude-voice](~/Projects/claude-voice) bridge |
 | **prompt-cleanup** | Fixes typos in what you type before Claude reads it (Haiku; skips commands, code and long pastes) |
 
 ```

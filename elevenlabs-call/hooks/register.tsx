@@ -9,30 +9,16 @@ const DIR = '"$HOME/Projects/claude-voice"'
 const START_BRIDGE = ['/bin/sh', '-c', `cd ${DIR} && nohup ./run.sh > bridge.log 2>&1 &`]
 const READ_TOKEN = ['/bin/sh', '-c', `cat ${DIR}/.token`]
 const HANG_UP = ['/bin/sh', '-c', `kill $(cat ${DIR}/.call.pid) 2>/dev/null; rm -f ${DIR}/.call.pid`]
-// The new chat's prompt box gets "/call"; the app has no auto-send, so press Return for the user.
-const PRESS_RETURN = ['osascript', '-e', 'delay 1.2', '-e', 'tell application "System Events" to keystroke return']
-const GROUP = 'Voice calls'
 
 const call = atom({ plugin: 'elevenlabs-call', key: 'call' } as const, null)
 
 let token = ''
-let cwd = ''
 let isOnCall = false // the session.start ticker polls the bridge only while true
 let isPolling = false
-let setup = '' // submitted by the ticker: a command.run hook can't start a turn itself
+let hasTicker = false
+let hasConnected = false // the call reported in once; 'ended' after that means it hung up
 // ponytail: replies are matched to voice tasks in order; a prompt you type mid-call shifts them
 const inflight: string[] = []
-
-const SETUP = (date: string) => `You are now on a live voice call with me (ElevenLabs). Messages that start with 🎙️ are me speaking; your final message each turn is read aloud, so end every turn with one to three plain spoken sentences.
-
-For this whole call I give blanket permission for anything I ask: act right away and never stop to ask for confirmation. That includes editing, committing and pushing, running anything, changing settings, typing in other apps (computer-use), and the browser.
-
-You can see and use all my chats: list_sessions, get_session, list_events and send_message, and the sidebar tools for groups. start_session is refused on voice turns, so make a new chat the way I would:
-  open "claude://code/new?folder=<absolute folder>&q=<url-encoded first message>"
-then run: osascript -e 'delay 1.2' -e 'tell application "System Events" to keystroke return'
-then find it with list_sessions and file it with move_sessions.
-
-Now: rename this chat to "Voice call ${date}" (set_session_title), file this chat (self) into the sidebar group "${GROUP}" (create it with create_group if list_groups has none), then reply with just: ready.`
 
 function post($: Engine, path: string, body: object) {
   return $.http.fetch(BRIDGE + path, {
@@ -71,6 +57,8 @@ async function pollOnce($: Engine) {
       inflight.push(task.id)
       void $.prompt.submit({ text: `🎙️ ${task.text}`, asUser: true })
     }
+    if (orb.mode !== 'ended') hasConnected = true
+    else if (hasConnected) return void (await hangUp($)) // you said bye, or the call dropped
     const mode = orb.mode === 'ended' ? 'ended' : inflight.length > 0 && orb.mode === 'listening' ? 'working' : orb.mode
     const now = await read($, call)
     if (now && now.mode !== mode) await update($, call, () => ({ mode }))
@@ -83,30 +71,28 @@ async function pollOnce($: Engine) {
 
 async function hangUp($: Engine) {
   isOnCall = false
+  hasConnected = false
   inflight.length = 0
   await $.process.run(HANG_UP)
   await update($, call, () => null)
 }
 
-// The Call button: a brand-new chat in this folder, which puts itself on the call.
-async function newCallChat($: Engine, agentId: string) {
+// Call: this chat goes on the call, through this Mac's mic and speakers.
+async function goOnCall($: Engine, agentId: string) {
   if (!agentId) {
     $.ui.toast('Set your ElevenLabs agent ID: /config → elevenlabs-call')
     return
   }
   await ensureBridge($)
-  await $.process.run(['open', `claude://code/new?folder=${encodeURIComponent(cwd)}&q=${encodeURIComponent('/call')}`])
-  await $.process.run(PRESS_RETURN)
-}
-
-// /call in a chat: this chat goes on the call, through this Mac's mic and speakers.
-async function goOnCall($: Engine, agentId: string) {
-  await ensureBridge($)
   await $.process.run(['/bin/sh', '-c', `cd ${DIR} && nohup .venv/bin/python call.py '${agentId.replace(/[^\w-]/g, '')}' > call.log 2>&1 &`])
   isOnCall = true
+  if (!hasTicker) {
+    hasTicker = true
+    $.clock.every(400, () => {
+      if (isOnCall) void pollOnce($)
+    })
+  }
   await update($, call, () => ({ mode: 'listening' }))
-  const date = new Date(await $.clock.now()).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
-  setup = SETUP(date)
 }
 
 // An ElevenLabs-style orb: soft blue, cyan and violet light turning inside a sphere.
@@ -154,14 +140,6 @@ export const register: Register = (on, options) => {
   const agentId = String(options.agentId ?? '').trim()
 
   on('session.start', async ($, e, next) => {
-    cwd = e.cwd
-    $.clock.every(400, () => {
-      if (setup) {
-        void $.prompt.submit({ text: setup })
-        setup = ''
-      }
-      if (isOnCall) void pollOnce($)
-    })
     await $.command.register({ name: 'call', description: 'Put this chat on a voice call (ElevenLabs); /call again hangs up' })
     return next(e)
   })
@@ -171,9 +149,8 @@ export const register: Register = (on, options) => {
       await hangUp($)
       return { text: 'Call ended.' }
     }
-    if (!agentId) return { text: 'Set your ElevenLabs agent ID first: /config → elevenlabs-call.' }
     await goOnCall($, agentId)
-    return { text: 'On the call. Talk; this chat does the work.' }
+    return { text: agentId ? 'On the call. Talk; this chat does the work.' : 'Set your ElevenLabs agent ID first: /config → elevenlabs-call.' }
   })
 
   // The chat's answer to a voice task goes back to be spoken.
@@ -196,7 +173,7 @@ export const register: Register = (on, options) => {
       const { Box, Button } = $.ui.resolve(e)
       return (
         <Box>
-          <Button key="call" label="📞 Call Claude Code" onPress={() => newCallChat($, agentId)} />
+          <Button key="call" label="📞 Call Claude Code" onPress={() => goOnCall($, agentId)} />
         </Box>
       )
     }

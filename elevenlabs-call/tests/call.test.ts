@@ -40,16 +40,17 @@ function world(on: On) {
   return { ran, done, typed }
 }
 
-test('the Call button opens a brand-new chat in this folder that runs /call', { options: { agentId: 'agent_test' } }, async ($, on) => {
+test('the Call button puts this chat on the call', { options: { agentId: 'agent_test' } }, async ($, on) => {
   const { ran } = world(on)
-  await $.session.start({ cwd: '/Users/me/proj', surface: 'desktop', isInteractive: true } as never)
+  await $.session.start({ cwd: '/tmp', surface: 'desktop', isInteractive: true } as never)
   const ui = await $.ui.mount({ plugin: 'elevenlabs-call', surface: 'desktop', ...BAND })
   await ui.press({ key: 'call' })
-  expect(ran).toContainEqual(['open', 'claude://code/new?folder=%2FUsers%2Fme%2Fproj&q=%2Fcall'])
-  expect(ran.at(-1)?.[0]).toBe('osascript')
+  expect(ran.some(a => a.join(' ').includes('call.py'))).toBe(true)
+  expect(ran.some(a => a[0] === 'open' || a[0] === 'osascript')).toBe(false)
+  expect(await ui.find({ type: 'Svg' })).toBeDefined()
 })
 
-test('/call puts this chat on the call: setup, orb, a voice task typed here, its reply sent back, hang up', { options: { agentId: 'agent_test' } }, async ($, on) => {
+test('/call puts this chat on the call: orb, a voice task typed here, its reply sent back, hang up', { options: { agentId: 'agent_test' } }, async ($, on) => {
   const clock = mock.clock(on)
   const { ran, done, typed } = world(on)
   await $.session.start({ cwd: '/tmp', surface: 'desktop', isInteractive: true } as never)
@@ -60,8 +61,7 @@ test('/call puts this chat on the call: setup, orb, a voice task typed here, its
   expect(await ui.find({ type: 'Svg' })).toBeDefined()
 
   await clock.advance(500)
-  expect(typed[0]).toContain('Voice calls')
-  expect(typed.at(-1)).toBe('🎙️ edit the README')
+  expect(typed).toEqual(['🎙️ edit the README'])
 
   await $.turn.complete({ reason: 'answer', answer: 'README updated.', turnId: 'x', durationMs: 1, isAborted: false } as never)
   expect(done).toEqual([{ id: 't1', text: 'README updated.' }])

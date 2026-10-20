@@ -1,7 +1,7 @@
 {
   "name": "elevenlabs-call",
-  "version": "0.3.0",
-  "description": "\ud83d\udcde Call Claude Code: opens a new chat on a live ElevenLabs voice call (local mic and speakers, animated orb), filed under Voice calls",
+  "version": "0.4.0",
+  "description": "\ud83d\udcde Call Claude Code: puts the chat you are in on a live ElevenLabs voice call (local mic and speakers, animated orb); hang up any time",
   "userConfig": {
     "agentId": {
       "type": "string",
