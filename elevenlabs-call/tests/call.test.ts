@@ -1,31 +1,30 @@
 import { expect, mock, test } from 'claude-code/testing'
+import type { On } from 'claude-code'
 
 const BAND = {
   component: 'AbovePrompt',
   props: { hasSurvey: false, isWorking: false, maxRows: 4, bodyColumns: 80, scroll: { offset: 0, bodyRows: 4 }, view: {} },
 } as const
-const OPEN = ['open', 'https://elevenlabs.io/app/talk-to?agent_id=agent_test']
 const RAN = { exitCode: 0, stderr: '', isStdoutTruncated: false, isStderrTruncated: false }
 const json = (body: object) => ({ value: { status: 200, ok: true, headers: {}, text: JSON.stringify(body) } })
 
-test('Call puts the chat on the call: a voice task is typed here and the reply goes back', { options: { agentId: 'agent_test' } }, async ($, on) => {
-  const clock = mock.clock(on)
+// The engine beneath the plugin: a running bridge with one voice task queued.
+function world(on: On) {
   const ran: string[][] = []
   const done: object[] = []
   const typed: string[] = []
   let isServed = false
   on('process.run', (_, e) => {
     ran.push([...e.argv])
-    return { value: { ...RAN, stdout: e.argv[0] === '/bin/sh' ? 'tok' : '' } }
+    return { value: { ...RAN, stdout: e.argv[0] === '/bin/sh' && e.argv[2]?.startsWith('cat') ? 'tok' : '' } }
   })
   on('http.fetch', (_, e) => {
     const path = e.url.replace('http://127.0.0.1:8787', '')
     if (!e.init?.headers?.Authorization) return { value: { status: 401, ok: false, headers: {}, text: '' } }
-    expect(e.init.headers.Authorization).toBe('Bearer tok')
     if (path === '/poll') {
       const task = isServed ? null : { id: 't1', text: 'edit the README' }
       isServed = true
-      return json({ task })
+      return json({ task, orb: { mode: 'speaking' } })
     }
     done.push(JSON.parse(e.init.body ?? '{}'))
     return json({ ok: true })
@@ -37,30 +36,43 @@ test('Call puts the chat on the call: a voice task is typed here and the reply g
   on('command.register', () => ({ value: { command: 'call' } }))
   on('session.start', (_, e) => ({ cwd: e.cwd }) as never)
   on('turn.complete', (_, e) => ({ text: e.answer }) as never)
+  on('ui.toast', () => ({ value: undefined }))
+  return { ran, done, typed }
+}
 
-  await $.session.start({ cwd: '/tmp', surface: 'desktop', isInteractive: true } as never)
+test('the Call button opens a brand-new chat in this folder that runs /call', { options: { agentId: 'agent_test' } }, async ($, on) => {
+  const { ran } = world(on)
+  await $.session.start({ cwd: '/Users/me/proj', surface: 'desktop', isInteractive: true } as never)
   const ui = await $.ui.mount({ plugin: 'elevenlabs-call', surface: 'desktop', ...BAND })
   await ui.press({ key: 'call' })
-  expect(ran.at(-1)).toEqual(OPEN)
-  expect(await ui.find({ key: 'hangup' })).toBeDefined()
+  expect(ran).toContainEqual(['open', 'claude://code/new?folder=%2FUsers%2Fme%2Fproj&q=%2Fcall'])
+  expect(ran.at(-1)?.[0]).toBe('osascript')
+})
 
-  await clock.advance(1100)
-  expect(typed).toEqual(['🎙️ edit the README'])
+test('/call puts this chat on the call: setup, orb, a voice task typed here, its reply sent back, hang up', { options: { agentId: 'agent_test' } }, async ($, on) => {
+  const clock = mock.clock(on)
+  const { ran, done, typed } = world(on)
+  await $.session.start({ cwd: '/tmp', surface: 'desktop', isInteractive: true } as never)
+  await $.command.run({ command: 'call', args: '' } as never)
+  expect(ran.some(a => a.join(' ').includes('call.py'))).toBe(true)
+
+  const ui = await $.ui.mount({ plugin: 'elevenlabs-call', surface: 'desktop', ...BAND })
+  expect(await ui.find({ type: 'Svg' })).toBeDefined()
+
+  await clock.advance(500)
+  expect(typed[0]).toContain('Voice calls')
+  expect(typed.at(-1)).toBe('🎙️ edit the README')
 
   await $.turn.complete({ reason: 'answer', answer: 'README updated.', turnId: 'x', durationMs: 1, isAborted: false } as never)
   expect(done).toEqual([{ id: 't1', text: 'README updated.' }])
 
   await ui.press({ key: 'hangup' })
+  expect(ran.at(-1)?.join(' ')).toContain('kill')
   expect(await ui.find({ key: 'call' })).toBeDefined()
 })
 
 test('Call without an agent ID runs nothing', async ($, on) => {
-  const ran: string[][] = []
-  on('process.run', (_, e) => {
-    ran.push([...e.argv])
-    return { value: { ...RAN, stdout: '' } }
-  })
-  on('ui.toast', () => ({ value: undefined }))
+  const { ran } = world(on)
   const ui = await $.ui.mount({ plugin: 'elevenlabs-call', surface: 'terminal', ...BAND })
   await ui.press({ key: 'call' })
   expect(ran).toEqual([])

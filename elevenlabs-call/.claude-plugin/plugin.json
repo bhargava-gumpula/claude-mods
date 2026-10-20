@@ -1,7 +1,7 @@
 {
   "name": "elevenlabs-call",
-  "version": "0.2.0",
-  "description": "A Call button that puts this chat on a live ElevenLabs voice call: what you say is typed here and the replies are spoken",
+  "version": "0.3.0",
+  "description": "\ud83d\udcde Call Claude Code: opens a new chat on a live ElevenLabs voice call (local mic and speakers, animated orb), filed under Voice calls",
   "userConfig": {
     "agentId": {
       "type": "string",
