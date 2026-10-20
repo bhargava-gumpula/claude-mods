@@ -3,7 +3,7 @@
   "owner": {
     "name": "Bhargava G"
   },
-  "description": "Claude Code mods: usage band, chat roster, /cube, /handoff, prompt cleanup, streak",
+  "description": "Claude Code mods: usage band, chat roster, /cube, /handoff, prompt cleanup, streak, ElevenLabs voice-call button",
   "plugins": [
     {
       "name": "usage-band",
@@ -28,6 +28,10 @@
     {
       "name": "streak",
       "source": "./streak"
+    },
+    {
+      "name": "elevenlabs-call",
+      "source": "./elevenlabs-call"
     }
   ]
 }

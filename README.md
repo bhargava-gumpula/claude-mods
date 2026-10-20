@@ -9,6 +9,7 @@ Mods for Claude Code (terminal and the desktop Code tab).
 | **cube** | `/cube`, `/cube 2`, `/cube 4`: random-state scrambles (the WCA method, via cubing.js) |
 | **handoff** | `/handoff [focus]`: runs the project's checks, writes the dev log entry and HANDOFF.md update, commits (never pushes), and summarizes |
 | **streak** | Your streak of days in a row using Claude Code in the status line (`streak 🔥 3 days`); `/streak` adds your longest streak and total days |
+| **elevenlabs-call** | A 📞 Call Claude Code button above the prompt (and `/call`): starts the [claude-voice](~/Projects/claude-voice) bridge if it is down and opens the ElevenLabs voice call with Claude Code |
 | **prompt-cleanup** | Fixes typos in what you type before Claude reads it (Haiku; skips commands, code and long pastes) |
 
 ```
@@ -31,6 +32,7 @@ In a Claude Code terminal session, one line per mod you want:
 /plugin install handoff --marketplace bhargava-gumpula/claude-mods
 /plugin install prompt-cleanup --marketplace bhargava-gumpula/claude-mods
 /plugin install streak --marketplace bhargava-gumpula/claude-mods
+/plugin install elevenlabs-call --marketplace bhargava-gumpula/claude-mods
 ```
 
 Answer `y` to add the marketplace, then pick the user scope.

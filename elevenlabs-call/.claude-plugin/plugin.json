@@ -1,0 +1,13 @@
+{
+  "name": "elevenlabs-call",
+  "version": "0.1.0",
+  "description": "A Call button above the prompt that starts a live ElevenLabs voice call with Claude Code",
+  "userConfig": {
+    "agentId": {
+      "type": "string",
+      "title": "ElevenLabs agent ID",
+      "description": "The agent to call, e.g. agent_0123… (ElevenLabs → Agents → your agent)",
+      "default": ""
+    }
+  }
+}
